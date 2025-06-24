@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: resume-matcher-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Podman-specific: ensure proper user mapping
+    userns_mode: "keep-id"
+
+  api:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile
+    container_name: resume-matcher-api
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DEBUG=false
+      - ENVIRONMENT=production
+      - USE_MOCK_JOBS=false
+      # Podman-specific environment variables
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - app_data:/app/data
+      - app_logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Podman-specific: ensure proper user mapping
+    userns_mode: "keep-id"
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile
+    container_name: resume-matcher-worker
+    command: celery -A app.core.celery_app.celery_app worker --loglevel=info --concurrency=2
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DEBUG=false
+      - ENVIRONMENT=production
+      - USE_MOCK_JOBS=false
+      # Podman-specific environment variables
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - app_data:/app/data
+      - app_logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.core.celery_app.celery_app", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Podman-specific: ensure proper user mapping
+    userns_mode: "keep-id"
+
+  flower:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile
+    container_name: resume-matcher-flower
+    command: celery -A app.core.celery_app.celery_app flower --port=5555
+    ports:
+      - "5555:5555"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - redis
+      - worker
+    profiles:
+      - monitoring
+    # Podman-specific: ensure proper user mapping
+    userns_mode: "keep-id"
+
+volumes:
+  redis_data:
+  app_data:
+  app_logs:
+
+networks:
+  default:
+    name: resume-matcher-network

@@ -80,6 +80,16 @@ class Settings(BaseSettings):
     JOB_SCRAPING_TIMEOUT: int = 30
     USE_MOCK_JOBS: bool = True  # Set to False for real scraping
     
+    # Rate limiting for web scraping
+    SCRAPING_MIN_DELAY: float = 1.0  # Minimum delay between requests (seconds)
+    SCRAPING_MAX_DELAY: float = 3.0  # Maximum delay between requests (seconds)
+    SCRAPING_MAX_RETRIES: int = 3    # Maximum retries for failed requests
+    
+    # Free job board settings
+    ENABLE_REMOTEOK: bool = True
+    ENABLE_WEWORKREMOTELY: bool = True
+    ENABLE_ENHANCED_FALLBACK: bool = True  # Use enhanced job generation as fallback
+    
     # Database settings (for future use)
     DATABASE_URL: Optional[str] = None
     DB_ECHO: bool = False

@@ -95,6 +95,8 @@ def process_resume_and_match_jobs(self, file_content: bytes, filename: str, cont
                 job_scraper.scrape_multiple_sources(search_queries)
             )
         finally:
+            # Ensure session is closed
+            loop.run_until_complete(job_scraper.close())
             loop.close()
         
         if not all_jobs:
