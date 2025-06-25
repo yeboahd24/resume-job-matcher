@@ -16,6 +16,8 @@ services:
       retries: 5
     # Podman-specific: ensure proper user mapping
     userns_mode: "keep-id"
+    networks:
+      - resume-matcher-network
 
   api:
     build:
@@ -25,9 +27,9 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - REDIS_URL=redis://redis:6379/0
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_URL=redis://resume-matcher-redis:6379/0
+      - CELERY_BROKER_URL=redis://resume-matcher-redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://resume-matcher-redis:6379/0
       - DEBUG=false
       - ENVIRONMENT=production
       - USE_MOCK_JOBS=false
@@ -47,6 +49,8 @@ services:
       start_period: 40s
     # Podman-specific: ensure proper user mapping
     userns_mode: "keep-id"
+    networks:
+      - resume-matcher-network
 
   worker:
     build:
@@ -55,9 +59,9 @@ services:
     container_name: resume-matcher-worker
     command: celery -A app.core.celery_app.celery_app worker --loglevel=info --concurrency=2
     environment:
-      - REDIS_URL=redis://redis:6379/0
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_URL=redis://resume-matcher-redis:6379/0
+      - CELERY_BROKER_URL=redis://resume-matcher-redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://resume-matcher-redis:6379/0
       - DEBUG=false
       - ENVIRONMENT=production
       - USE_MOCK_JOBS=false
@@ -77,6 +81,8 @@ services:
       start_period: 40s
     # Podman-specific: ensure proper user mapping
     userns_mode: "keep-id"
+    networks:
+      - resume-matcher-network
 
   flower:
     build:
@@ -87,9 +93,9 @@ services:
     ports:
       - "5555:5555"
     environment:
-      - REDIS_URL=redis://redis:6379/0
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_URL=redis://resume-matcher-redis:6379/0
+      - CELERY_BROKER_URL=redis://resume-matcher-redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://resume-matcher-redis:6379/0
       - PYTHONUNBUFFERED=1
     depends_on:
       - redis
@@ -98,6 +104,8 @@ services:
       - monitoring
     # Podman-specific: ensure proper user mapping
     userns_mode: "keep-id"
+    networks:
+      - resume-matcher-network
 
 volumes:
   redis_data:
@@ -105,5 +113,5 @@ volumes:
   app_logs:
 
 networks:
-  default:
+  resume-matcher-network:
     name: resume-matcher-network

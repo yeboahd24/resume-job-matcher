@@ -4,7 +4,12 @@ Application configuration management
 
 import os
 from typing import List, Optional
-from pydantic import BaseSettings, validator
+try:
+    from pydantic_settings import BaseSettings
+    from pydantic import validator
+except ImportError:
+    # Fallback for older pydantic versions
+    from pydantic import BaseSettings, validator
 
 
 class Settings(BaseSettings):

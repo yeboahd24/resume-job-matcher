@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Resume Job Matcher - Test Upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .container {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f5f5f5;
+            white-space: pre-wrap;
+            display: none;
+        }
+        .note {
+            background-color: #ffffcc;
+            padding: 10px;
+            border-left: 4px solid #ffcc00;
+            margin-bottom: 20px;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .success {
+            color: #27ae60;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Resume Job Matcher - Test Upload</h1>
+    
+    <div class="note">
+        <strong>Important:</strong> Make sure your Resume Job Matcher API is running at <code>http://localhost:8000</code>
+    </div>
+    
+    <div class="container">
+        <h2>Upload Resume</h2>
+        <form id="uploadForm">
+            <div class="form-group">
+                <label for="resumeFile">Select Resume File:</label>
+                <input type="file" id="resumeFile" name="file" required>
+                <small>Supported formats: .txt, .pdf</small>
+            </div>
+            <button type="submit">Match Jobs</button>
+        </form>
+    </div>
+    
+    <div id="taskStatus" style="display: none;">
+        <h3>Task Status</h3>
+        <p id="statusMessage">Processing...</p>
+        <div id="progressBar" style="height: 20px; background-color: #eee; border-radius: 5px; margin-top: 10px;">
+            <div id="progressFill" style="height: 100%; width: 0%; background-color: #3498db; border-radius: 5px;"></div>
+        </div>
+    </div>
+    
+    <div id="resultContainer" class="result">
+        <h3>Results</h3>
+        <pre id="resultContent"></pre>
+    </div>
+    
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('resumeFile');
+            if (!fileInput.files.length) {
+                alert('Please select a file');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
+            document.getElementById('resultContainer').style.display = 'none';
+            document.getElementById('taskStatus').style.display = 'block';
+            document.getElementById('statusMessage').textContent = 'Uploading resume...';
+            document.getElementById('progressFill').style.width = '10%';
+            
+            try {
+                // Step 1: Upload the resume
+                const uploadResponse = await fetch('http://localhost:8000/api/v1/jobs/match', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!uploadResponse.ok) {
+                    throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
+                }
+                
+                const uploadData = await uploadResponse.json();
+                const taskId = uploadData.task_id;
+                
+                document.getElementById('statusMessage').textContent = `Task created (ID: ${taskId}). Checking status...`;
+                document.getElementById('progressFill').style.width = '30%';
+                
+                // Step 2: Poll for task status
+                let status = 'PENDING';
+                let attempts = 0;
+                const maxAttempts = 30;
+                
+                while ((status === 'PENDING' || status === 'STARTED') && attempts < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+                    
+                    const statusResponse = await fetch(`http://localhost:8000/api/v1/tasks/${taskId}/status`);
+                    if (!statusResponse.ok) {
+                        throw new Error(`Status check failed: ${statusResponse.status}`);
+                    }
+                    
+                    const statusData = await statusResponse.json();
+                    status = statusData.status;
+                    
+                    let progressPercent = 30 + (attempts / maxAttempts * 50);
+                    document.getElementById('progressFill').style.width = `${progressPercent}%`;
+                    document.getElementById('statusMessage').textContent = `Task status: ${status}`;
+                    
+                    if (statusData.meta && statusData.meta.percentage) {
+                        document.getElementById('progressFill').style.width = `${30 + (statusData.meta.percentage * 0.6)}%`;
+                        document.getElementById('statusMessage').textContent = `${statusData.meta.progress || status}`;
+                    }
+                    
+                    attempts++;
+                }
+                
+                // Step 3: Get results
+                if (status === 'SUCCESS') {
+                    document.getElementById('progressFill').style.width = '100%';
+                    document.getElementById('statusMessage').innerHTML = '<span class="success">✅ Job matching completed!</span>';
+                    
+                    const resultResponse = await fetch(`http://localhost:8000/api/v1/tasks/${taskId}/result`);
+                    if (!resultResponse.ok) {
+                        throw new Error(`Result fetch failed: ${resultResponse.status}`);
+                    }
+                    
+                    const resultData = await resultResponse.json();
+                    
+                    document.getElementById('resultContent').textContent = JSON.stringify(resultData, null, 2);
+                    document.getElementById('resultContainer').style.display = 'block';
+                } else {
+                    throw new Error(`Task failed or timed out. Status: ${status}`);
+                }
+                
+            } catch (error) {
+                document.getElementById('statusMessage').innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+                console.error('Error:', error);
+            }
+        });
+    </script>
+</body>
+</html>

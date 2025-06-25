@@ -66,9 +66,28 @@ done
 echo "🔧 Using compose command: $COMPOSE_CMD"
 echo "📁 Using compose file: deployment/podman/podman-compose.yml"
 
+# Check for port conflicts first
+echo "🔍 Checking for port conflicts..."
+if [ -f "./scripts/fix_port_conflicts.sh" ]; then
+    ./scripts/fix_port_conflicts.sh
+    if [ $? -ne 0 ]; then
+        echo "⚠️  Port conflicts detected. Please resolve them before continuing."
+        echo "   You can try: ./scripts/fix_podman_issues.sh"
+        exit 1
+    fi
+fi
+
 # Start services
 echo "🐳 Starting containers..."
 $COMPOSE_CMD -f deployment/podman/podman-compose.yml up $BUILD_FLAG $DETACH_FLAG $MONITORING
+
+# Check if startup was successful
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "❌ Error starting containers!"
+    echo "   Try running: ./scripts/fix_podman_issues.sh"
+    exit 1
+fi
 
 if [ "$DETACH_FLAG" = "-d" ]; then
     echo ""
