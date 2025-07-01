@@ -26,6 +26,8 @@ cd resume-job-matcher
 ✅ **Salary Ranges**: $50/hour to $200K+ with equity information  
 ✅ **Production Ready**: Comprehensive testing, monitoring, and deployment
 
+> 🚀 **This is just the beginning!** Check out our [Future Features](#-future-features-coming-soon) section to see what's coming next, including subscriptions, authentication, downloadable reports, custom salary filtering, and multi-file uploads!
+
 ## ✨ Key Features
 
 ### 🧠 **Smart Resume Analysis**
@@ -325,6 +327,108 @@ python3 validate_implementation.py
 - Optimized ML pipelines with scikit-learn
 - Horizontal scaling support
 - Resource limits and health checks
+
+## 🚀 **Future Features (Coming Soon)**
+
+We're continuously improving the Resume Job Matcher with exciting new features:
+
+### 💳 **Premium Subscription Plans**
+- **Free Tier**: 5 job matches per month, basic features
+- **Pro Tier**: Unlimited matches, priority processing, advanced filters
+- **Enterprise Tier**: API access, bulk processing, custom integrations
+- **Student Tier**: Discounted rates for students and new graduates
+
+### 🔐 **User Authentication & Profiles**
+- **Secure Login**: Email/password and social media authentication
+- **User Profiles**: Save resumes, job preferences, and search history
+- **Match History**: Track all previous job matches and applications
+- **Personalized Recommendations**: AI-powered job suggestions based on profile
+
+### 📥 **Downloadable Reports & Files**
+- **PDF Job Reports**: Professionally formatted job match reports
+- **Excel Exports**: Spreadsheet format for easy tracking and analysis
+- **Cover Letter Generator**: AI-generated cover letters for matched jobs
+- **Resume Optimization**: Suggestions to improve resume for specific jobs
+
+### 💰 **Custom Salary Range Filtering**
+- **Salary Preferences**: Set minimum and maximum salary expectations
+- **Location-based Adjustments**: Automatic cost-of-living adjustments
+- **Equity Considerations**: Filter by equity/stock option availability
+- **Benefits Filtering**: Health insurance, remote work, vacation time
+
+### 📎 **Multi-File Upload Support**
+- **Concurrent Processing**: Upload multiple resumes simultaneously
+- **Resume Comparison**: Compare different resume versions for effectiveness
+- **Bulk Job Matching**: Process multiple candidates at once (Enterprise)
+- **Portfolio Support**: Upload cover letters, portfolios, and certifications
+
+### 🎯 **Advanced Matching Features**
+- **Smart Notifications**: Real-time alerts for new matching jobs
+- **Application Tracking**: Track application status and responses
+- **Interview Scheduling**: Integration with calendar systems
+- **Salary Negotiation**: Market data and negotiation tips
+
+### 🔗 **Integrations & API Access**
+- **LinkedIn Integration**: Import profile data and post applications
+- **ATS Compatibility**: Direct application to company systems
+- **Calendar Integration**: Schedule interviews and follow-ups
+- **CRM Integration**: For recruiters and HR professionals
+
+### 📊 **Analytics & Insights**
+- **Match Analytics**: Detailed insights into job match quality
+- **Market Trends**: Industry salary trends and job market analysis
+- **Resume Performance**: Track which resume versions perform best
+- **Success Metrics**: Application-to-interview conversion rates
+
+## 🗓️ **Development Roadmap**
+
+### **Phase 1: Core Enhancements** (Q1 2025)
+- ✅ Enhanced job scraping (COMPLETED)
+- 🔄 User authentication system
+- 🔄 Basic subscription tiers
+- 🔄 Downloadable PDF reports
+
+### **Phase 2: Advanced Features** (Q2 2025)
+- 📋 Custom salary filtering
+- 📋 Multi-file upload support
+- 📋 Resume optimization suggestions
+- 📋 Cover letter generation
+
+### **Phase 3: Enterprise Features** (Q3 2025)
+- 📋 API access for developers
+- 📋 Bulk processing capabilities
+- 📋 Advanced analytics dashboard
+- 📋 Integration marketplace
+
+### **Phase 4: AI & Automation** (Q4 2025)
+- 📋 AI-powered job recommendations
+- 📋 Automated application submission
+- 📋 Interview preparation tools
+- 📋 Career path planning
+
+## 🎯 **Technical Roadmap**
+
+### **Immediate Improvements**
+1. **Enhanced Job Sources**: Fix partial sources and add more APIs
+2. **Database Integration**: User data persistence and profiles
+3. **Payment Processing**: Stripe integration for subscriptions
+4. **File Management**: Advanced upload and storage capabilities
+
+### **Infrastructure Scaling**
+1. **Microservices Architecture**: Split into scalable components
+2. **CDN Integration**: Fast file delivery and caching
+3. **Load Balancing**: Handle increased user traffic
+4. **Monitoring & Analytics**: Advanced performance tracking
+
+### **AI & Machine Learning**
+1. **Improved NLP**: Better skill extraction and job matching
+2. **Recommendation Engine**: Personalized job suggestions
+3. **Predictive Analytics**: Success probability scoring
+4. **Automated Optimization**: Self-improving algorithms
+
+---
+
+> 💡 **Want early access to these features?** Join our beta program or subscribe to our newsletter for updates!
 
 ## 🤝 Contributing
 
