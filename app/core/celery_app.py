@@ -31,6 +31,8 @@ def create_celery_app() -> Celery:
         worker_prefetch_multiplier=1,
         task_acks_late=True,
         worker_max_tasks_per_child=1000,
+        # Use default queue for all tasks
+        task_default_queue='default',
         task_routes={
             "app.services.tasks.*": {"queue": "default"},
         },
