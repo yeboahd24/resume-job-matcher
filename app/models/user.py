@@ -2,7 +2,7 @@
 User models for authentication and profiles
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Float, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
@@ -251,6 +251,9 @@ class SubscriptionInfo(BaseModel):
     matches_used: int
     matches_remaining: int
     features: List[str]
+    next_reset_date: Optional[datetime] = None
+    upgrade_options: List[str] = []
+    price_info: Optional[dict] = None
     
     @classmethod
     def from_user(cls, user: User) -> "SubscriptionInfo":
@@ -263,11 +266,35 @@ class SubscriptionInfo(BaseModel):
         }
         
         tier_features = {
-            SubscriptionTier.FREE: ["Basic job matching", "5 matches per month"],
-            SubscriptionTier.PRO: ["Unlimited matches", "Priority processing", "Advanced filters", "PDF reports"],
-            SubscriptionTier.ENTERPRISE: ["All Pro features", "API access", "Bulk processing", "Custom integrations"],
-            SubscriptionTier.STUDENT: ["15 matches per month", "Student discount", "Career resources"],
+            SubscriptionTier.FREE: ["Basic job matching", "5 matches per month", "Standard processing time"],
+            SubscriptionTier.PRO: ["Unlimited matches", "Priority processing", "Advanced filters", "PDF reports", "Email notifications"],
+            SubscriptionTier.ENTERPRISE: ["All Pro features", "API access", "Bulk processing", "Custom integrations", "Dedicated support"],
+            SubscriptionTier.STUDENT: ["15 matches per month", "Student discount", "Career resources", "Resume templates"],
         }
+        
+        # Price information (placeholder for now)
+        price_info = {
+            SubscriptionTier.FREE: {"monthly": 0, "annual": 0},
+            SubscriptionTier.STUDENT: {"monthly": 4.99, "annual": 49.99},
+            SubscriptionTier.PRO: {"monthly": 9.99, "annual": 99.99},
+            SubscriptionTier.ENTERPRISE: {"monthly": 49.99, "annual": 499.99},
+        }
+        
+        # Calculate next reset date
+        next_reset_date = None
+        if user.last_match_reset:
+            next_reset_date = user.last_match_reset + timedelta(days=30)
+        
+        # Determine available upgrade options based on current tier
+        upgrade_options = []
+        current_tier = user.subscription_tier
+        
+        if current_tier == SubscriptionTier.FREE:
+            upgrade_options = [SubscriptionTier.STUDENT, SubscriptionTier.PRO, SubscriptionTier.ENTERPRISE]
+        elif current_tier == SubscriptionTier.STUDENT:
+            upgrade_options = [SubscriptionTier.PRO, SubscriptionTier.ENTERPRISE]
+        elif current_tier == SubscriptionTier.PRO:
+            upgrade_options = [SubscriptionTier.ENTERPRISE]
         
         monthly_limit = tier_limits.get(user.subscription_tier, 5)
         matches_remaining = monthly_limit - user.monthly_matches_used if monthly_limit > 0 else -1
@@ -277,5 +304,8 @@ class SubscriptionInfo(BaseModel):
             monthly_limit=monthly_limit,
             matches_used=user.monthly_matches_used,
             matches_remaining=matches_remaining,
-            features=tier_features.get(user.subscription_tier, [])
+            features=tier_features.get(user.subscription_tier, []),
+            next_reset_date=next_reset_date,
+            upgrade_options=upgrade_options,
+            price_info=price_info.get(user.subscription_tier)
         )

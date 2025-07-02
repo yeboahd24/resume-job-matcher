@@ -4,7 +4,7 @@ Main API router that includes all endpoint routers
 
 from fastapi import APIRouter
 
-from app.api.endpoints import health, jobs, tasks, auth
+from app.api.endpoints import health, jobs, tasks, auth, subscription
 
 api_router = APIRouter()
 
@@ -13,3 +13,4 @@ api_router.include_router(health.router, prefix="/health", tags=["health"])
 api_router.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
 api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
+api_router.include_router(subscription.router, prefix="/subscription", tags=["subscription"])

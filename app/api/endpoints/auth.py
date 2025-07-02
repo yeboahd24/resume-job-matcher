@@ -32,7 +32,7 @@ from app.models.user import (
 )
 import json
 from sqlalchemy import select, update
-from datetime import datetime
+from datetime import datetime, timedelta
 
 router = APIRouter()
 
@@ -204,6 +204,14 @@ async def get_subscription_info(
     """
     Get current user's subscription information
     """
+    # Check if it's time to reset the monthly counter
+    if user.last_match_reset:
+        one_month_ago = datetime.utcnow() - timedelta(days=30)
+        if user.last_match_reset < one_month_ago:
+            # Reset counter (this will be saved when the user makes their next request)
+            user.monthly_matches_used = 0
+            user.last_match_reset = datetime.utcnow()
+    
     return SubscriptionInfo.from_user(user)
 
 
