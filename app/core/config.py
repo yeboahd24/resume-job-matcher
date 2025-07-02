@@ -95,9 +95,27 @@ class Settings(BaseSettings):
     ENABLE_WEWORKREMOTELY: bool = True
     ENABLE_ENHANCED_FALLBACK: bool = True  # Use enhanced job generation as fallback
     
-    # Database settings (for future use)
+    # Database settings
     DATABASE_URL: Optional[str] = None
     DB_ECHO: bool = False
+    
+    @validator("DATABASE_URL", pre=True)
+    def assemble_database_connection(cls, v: Optional[str], values: dict) -> str:
+        if isinstance(v, str):
+            return v
+        # Default to SQLite for development
+        return "sqlite+aiosqlite:///./data/resumematcher.db"
+    
+    # Authentication settings
+    SECRET_KEY: str = "your-secret-key-change-in-production-please-use-a-secure-random-key"
+    JWT_SECRET_KEY: str = "jwt-secret-key-change-in-production"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    
+    # User settings
+    USER_REGISTRATION_ENABLED: bool = True
+    USER_VERIFICATION_ENABLED: bool = False  # Email verification (disabled for MVP)
+    RESET_PASSWORD_ENABLED: bool = True
     
     # Logging settings
     LOG_LEVEL: str = "INFO"

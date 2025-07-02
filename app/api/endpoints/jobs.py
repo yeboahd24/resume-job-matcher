@@ -2,14 +2,19 @@
 Job matching endpoints
 """
 
-from fastapi import APIRouter, File, UploadFile, HTTPException, Depends
+from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, status
 import logging
-from typing import List
+from typing import List, Optional
+from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime, timedelta
 
 from app.models import MatchJobsResponse
 from app.services.file_service import FileService
 from app.services.tasks import process_resume_and_match_jobs
 from app.core.config import settings
+from app.auth.manager import current_active_user, current_superuser
+from app.models.user import User, JobMatch, SubscriptionTier
+from app.db.database import get_async_session
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -25,7 +30,9 @@ def get_file_service() -> FileService:
 @router.post("/match", response_model=MatchJobsResponse)
 async def match_jobs(
     file: UploadFile = File(...),
-    file_service: FileService = Depends(get_file_service)
+    file_service: FileService = Depends(get_file_service),
+    user: Optional[User] = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session)
 ):
     """
     Upload a resume and trigger job matching process.
@@ -49,12 +56,53 @@ async def match_jobs(
                 detail="Empty file uploaded"
             )
         
+        # Check subscription limits if user is authenticated
+        if user:
+            # Check if user has reached their monthly limit
+            if user.subscription_tier == SubscriptionTier.FREE and user.monthly_matches_used >= 5:
+                raise HTTPException(
+                    status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                    detail="You have reached your monthly limit of 5 job matches. Please upgrade your subscription."
+                )
+            elif user.subscription_tier == SubscriptionTier.STUDENT and user.monthly_matches_used >= 15:
+                raise HTTPException(
+                    status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                    detail="You have reached your monthly limit of 15 job matches. Please upgrade your subscription."
+                )
+            
+            # Check if it's time to reset the monthly counter
+            if user.last_match_reset:
+                one_month_ago = datetime.utcnow() - timedelta(days=30)
+                if user.last_match_reset < one_month_ago:
+                    # Reset counter
+                    user.monthly_matches_used = 0
+                    user.last_match_reset = datetime.utcnow()
+            
+            # Increment usage counter
+            user.monthly_matches_used += 1
+            
+            # Update user in database
+            user.updated_at = datetime.utcnow()
+            session.add(user)
+            await session.commit()
+        
         # Trigger Celery task
         task = process_resume_and_match_jobs.delay(
             file_content=file_content,
             filename=file.filename,
-            content_type=file.content_type
+            content_type=file.content_type,
+            user_id=user.id if user else None
         )
+        
+        # Record job match in database if user is authenticated
+        if user:
+            job_match = JobMatch(
+                user_id=user.id,
+                resume_filename=file.filename,
+                created_at=datetime.utcnow()
+            )
+            session.add(job_match)
+            await session.commit()
         
         logger.info(f"Started job matching task: {task.id} for file: {file.filename}")
         

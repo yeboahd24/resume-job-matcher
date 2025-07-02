@@ -4,7 +4,7 @@ Celery tasks for background processing
 
 import time
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import logging
 
 from app.core.celery_app import celery_app
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 @celery_app.task(bind=True, name="app.services.tasks.process_resume_and_match_jobs")
-def process_resume_and_match_jobs(self, file_content: bytes, filename: str, content_type: str) -> Dict[str, Any]:
+def process_resume_and_match_jobs(self, file_content: bytes, filename: str, content_type: str, user_id: Optional[int] = None) -> Dict[str, Any]:
     """
     Main Celery task to process resume and match jobs
     
@@ -27,6 +27,7 @@ def process_resume_and_match_jobs(self, file_content: bytes, filename: str, cont
         file_content: Resume file content as bytes
         filename: Original filename
         content_type: MIME type of the file
+        user_id: Optional user ID for authenticated users
         
     Returns:
         Dictionary with matched jobs and processing metadata
@@ -149,7 +150,8 @@ def process_resume_and_match_jobs(self, file_content: bytes, filename: str, cont
                 'filename': filename,
                 'content_type': content_type,
                 'size_bytes': len(file_content)
-            }
+            },
+            'user_id': user_id  # Include user ID if available
         }
         
         logger.info(f"Job matching completed in {processing_time:.2f} seconds. "
