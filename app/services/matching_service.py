@@ -21,6 +21,7 @@ class JobMatchingService:
     
     def __init__(self):
         self.similarity_threshold = settings.SIMILARITY_THRESHOLD
+        self.max_jobs = settings.MAX_MATCHED_JOBS
         self.max_features = 1000
         self.vectorizer = None
     
@@ -133,7 +134,7 @@ class JobMatchingService:
             matched_jobs.sort(key=lambda x: x.similarity_score, reverse=True)
             
             # Limit to maximum number of matches
-            return matched_jobs[:settings.MAX_MATCHED_JOBS]
+            return matched_jobs[:self.max_jobs]
             
         except Exception as e:
             logger.error(f"Error in match_jobs_to_resume: {str(e)}")

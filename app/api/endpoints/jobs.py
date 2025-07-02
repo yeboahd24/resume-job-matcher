@@ -2,7 +2,7 @@
 Job matching endpoints
 """
 
-from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, status
+from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, status, Query
 import logging
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,8 +16,9 @@ from app.auth.manager import current_active_user, current_superuser
 from app.models.user import User, JobMatch, SubscriptionTier
 from app.db.database import get_async_session
 
-router = APIRouter()
 logger = logging.getLogger(__name__)
+
+router = APIRouter()
 
 
 def get_file_service() -> FileService:
@@ -27,23 +28,62 @@ def get_file_service() -> FileService:
     return FileService()
 
 
+def parse_float_param(param: Optional[str] = None) -> Optional[float]:
+    """Parse and validate float parameter, handling whitespace"""
+    if param is None:
+        return None
+    try:
+        # Strip whitespace and convert to float
+        cleaned_param = param.strip() if isinstance(param, str) else param
+        value = float(cleaned_param)
+        if 0 <= value <= 1:
+            return value
+        raise HTTPException(status_code=400, detail="Parameter must be between 0 and 1")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Parameter must be a valid float")
+
+def parse_int_param(param: Optional[str] = None) -> Optional[int]:
+    """Parse and validate integer parameter, handling whitespace"""
+    if param is None:
+        return None
+    try:
+        # Strip whitespace and convert to int
+        cleaned_param = param.strip() if isinstance(param, str) else param
+        value = int(cleaned_param)
+        if 1 <= value <= 50:
+            return value
+        raise HTTPException(status_code=400, detail="Parameter must be between 1 and 50")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Parameter must be a valid integer")
+
 @router.post("/match", response_model=MatchJobsResponse)
 async def match_jobs(
     file: UploadFile = File(...),
     file_service: FileService = Depends(get_file_service),
     user: Optional[User] = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session)
+    session: AsyncSession = Depends(get_async_session),
+    similarity_threshold: Optional[str] = Query(None, description="Custom similarity threshold (0.0 to 1.0)"),
+    max_jobs: Optional[str] = Query(None, description="Maximum number of jobs to return (1 to 50)")
 ):
     """
     Upload a resume and trigger job matching process.
     
     Args:
         file: Resume file (PDF or text format)
+        similarity_threshold: Optional custom similarity threshold (0.0 to 1.0)
+        max_jobs: Optional maximum number of jobs to return (1 to 50)
         
     Returns:
         Task ID and status for tracking the job matching process
     """
     try:
+        # Parse and validate parameters
+        parsed_similarity_threshold = parse_float_param(similarity_threshold)
+        parsed_max_jobs = parse_int_param(max_jobs)
+        
+        # Debug parameters
+        logger.info(f"Job matching parameters - similarity_threshold: {parsed_similarity_threshold}, max_jobs: {parsed_max_jobs}")
+        
         # Validate file
         file_service.validate_file(file)
         
@@ -91,7 +131,9 @@ async def match_jobs(
             file_content=file_content,
             filename=file.filename,
             content_type=file.content_type,
-            user_id=user.id if user else None
+            user_id=user.id if user else None,
+            similarity_threshold=parsed_similarity_threshold,
+            max_jobs=parsed_max_jobs
         )
         
         # Record job match in database if user is authenticated

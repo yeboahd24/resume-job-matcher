@@ -18,7 +18,15 @@ logger = logging.getLogger(__name__)
 
 
 @celery_app.task(bind=True, name="app.services.tasks.process_resume_and_match_jobs")
-def process_resume_and_match_jobs(self, file_content: bytes, filename: str, content_type: str, user_id: Optional[int] = None) -> Dict[str, Any]:
+def process_resume_and_match_jobs(
+    self, 
+    file_content: bytes, 
+    filename: str, 
+    content_type: str, 
+    user_id: Optional[int] = None,
+    similarity_threshold: Optional[float] = None,
+    max_jobs: Optional[int] = None
+) -> Dict[str, Any]:
     """
     Main Celery task to process resume and match jobs
     
@@ -28,6 +36,8 @@ def process_resume_and_match_jobs(self, file_content: bytes, filename: str, cont
         filename: Original filename
         content_type: MIME type of the file
         user_id: Optional user ID for authenticated users
+        similarity_threshold: Optional custom similarity threshold (0.0 to 1.0)
+        max_jobs: Optional maximum number of jobs to return (1 to 50)
         
     Returns:
         Dictionary with matched jobs and processing metadata
@@ -39,7 +49,15 @@ def process_resume_and_match_jobs(self, file_content: bytes, filename: str, cont
         file_service = FileService()
         nlp_service = NLPService()
         job_scraper = JobScraperService()
+        
+        # Initialize matching service with custom parameters if provided
         matching_service = JobMatchingService()
+        if similarity_threshold is not None:
+            matching_service.similarity_threshold = similarity_threshold
+        if max_jobs is not None:
+            matching_service.max_jobs = max_jobs
+            
+        logger.info(f"Using similarity threshold: {matching_service.similarity_threshold}, max jobs: {matching_service.max_jobs}")
         
         # Step 1: Extract text from resume
         self.update_state(

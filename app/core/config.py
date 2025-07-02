@@ -74,11 +74,11 @@ class Settings(BaseSettings):
     
     # ML/NLP settings
     SPACY_MODEL: str = "en_core_web_sm"
-    SIMILARITY_THRESHOLD: float = 0.1
+    SIMILARITY_THRESHOLD: float = 0.05  # Lower threshold to show more jobs (5%)
     MAX_SKILLS_EXTRACT: int = 20
     MAX_JOB_TITLES_EXTRACT: int = 10
     MAX_JOBS_PER_SKILL: int = 2
-    MAX_MATCHED_JOBS: int = 5
+    MAX_MATCHED_JOBS: int = 10  # Show up to 10 matched jobs
     
     # Job scraping settings
     JOB_SCRAPING_ENABLED: bool = True

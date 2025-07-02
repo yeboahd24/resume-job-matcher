@@ -10,6 +10,10 @@ from .user import (
     UserProfile, UserProfileRead, UserProfileCreate, UserProfileUpdate,
     JobMatch, JobMatchRead, SubscriptionInfo, SubscriptionTier
 )
+from .report import (
+    ReportRequest, ReportResponse, ReportData, ReportMetadata,
+    ReportFormat, ReportTheme, ReportSection
+)
 
 __all__ = [
     "JobDetail",
@@ -32,4 +36,11 @@ __all__ = [
     "JobMatchRead",
     "SubscriptionInfo",
     "SubscriptionTier",
+    "ReportRequest",
+    "ReportResponse",
+    "ReportData",
+    "ReportMetadata",
+    "ReportFormat",
+    "ReportTheme",
+    "ReportSection",
 ]
