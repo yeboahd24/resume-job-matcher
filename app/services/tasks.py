@@ -25,7 +25,9 @@ def process_resume_and_match_jobs(
     content_type: str, 
     user_id: Optional[int] = None,
     similarity_threshold: Optional[float] = None,
-    max_jobs: Optional[int] = None
+    max_jobs: Optional[int] = None,
+    min_salary: Optional[int] = None,
+    max_salary: Optional[int] = None
 ) -> Dict[str, Any]:
     """
     Main Celery task to process resume and match jobs
@@ -38,6 +40,8 @@ def process_resume_and_match_jobs(
         user_id: Optional user ID for authenticated users
         similarity_threshold: Optional custom similarity threshold (0.0 to 1.0)
         max_jobs: Optional maximum number of jobs to return (1 to 50)
+        min_salary: Optional minimum salary requirement
+        max_salary: Optional maximum salary consideration
         
     Returns:
         Dictionary with matched jobs and processing metadata
@@ -56,8 +60,17 @@ def process_resume_and_match_jobs(
             matching_service.similarity_threshold = similarity_threshold
         if max_jobs is not None:
             matching_service.max_jobs = max_jobs
+        if min_salary is not None:
+            matching_service.min_salary = min_salary
+        if max_salary is not None:
+            matching_service.max_salary = max_salary
             
-        logger.info(f"Using similarity threshold: {matching_service.similarity_threshold}, max jobs: {matching_service.max_jobs}")
+        logger.info(
+            f"Using similarity threshold: {matching_service.similarity_threshold}, "
+            f"max jobs: {matching_service.max_jobs}, "
+            f"min salary: {matching_service.min_salary}, "
+            f"max salary: {matching_service.max_salary}"
+        )
         
         # Step 1: Extract text from resume
         self.update_state(

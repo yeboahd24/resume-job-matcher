@@ -56,6 +56,20 @@ def parse_int_param(param: Optional[str] = None) -> Optional[int]:
     except ValueError:
         raise HTTPException(status_code=400, detail="Parameter must be a valid integer")
 
+def parse_salary_param(param: Optional[str] = None) -> Optional[int]:
+    """Parse and validate salary parameter, handling whitespace"""
+    if param is None:
+        return None
+    try:
+        # Strip whitespace and convert to int
+        cleaned_param = param.strip() if isinstance(param, str) else param
+        value = int(cleaned_param)
+        if value < 0:
+            raise HTTPException(status_code=400, detail="Salary must be a positive value")
+        return value
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Salary must be a valid integer")
+
 @router.post("/match", response_model=MatchJobsResponse)
 async def match_jobs(
     file: UploadFile = File(...),
@@ -63,7 +77,10 @@ async def match_jobs(
     user: Optional[User] = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
     similarity_threshold: Optional[str] = Query(None, description="Custom similarity threshold (0.0 to 1.0)"),
-    max_jobs: Optional[str] = Query(None, description="Maximum number of jobs to return (1 to 50)")
+    max_jobs: Optional[str] = Query(None, description="Maximum number of jobs to return (1 to 50)"),
+    min_salary: Optional[str] = Query(None, description="Minimum salary requirement (e.g., 50000)"),
+    max_salary: Optional[str] = Query(None, description="Maximum salary consideration (e.g., 150000)"),
+    use_profile_salary: bool = Query(False, description="Use salary preferences from user profile")
 ):
     """
     Upload a resume and trigger job matching process.
@@ -72,6 +89,9 @@ async def match_jobs(
         file: Resume file (PDF or text format)
         similarity_threshold: Optional custom similarity threshold (0.0 to 1.0)
         max_jobs: Optional maximum number of jobs to return (1 to 50)
+        min_salary: Optional minimum salary requirement
+        max_salary: Optional maximum salary consideration
+        use_profile_salary: Whether to use salary preferences from user profile
         
     Returns:
         Task ID and status for tracking the job matching process
@@ -80,9 +100,43 @@ async def match_jobs(
         # Parse and validate parameters
         parsed_similarity_threshold = parse_float_param(similarity_threshold)
         parsed_max_jobs = parse_int_param(max_jobs)
+        parsed_min_salary = parse_salary_param(min_salary)
+        parsed_max_salary = parse_salary_param(max_salary)
+        
+        # Get salary preferences from user profile if requested
+        profile_min_salary = None
+        profile_max_salary = None
+        
+        if use_profile_salary and user:
+            # Get user profile
+            from sqlalchemy import select
+            from app.models.user import UserProfile
+            
+            result = await session.execute(
+                select(UserProfile).where(UserProfile.user_id == user.id)
+            )
+            profile = result.scalars().first()
+            
+            if profile:
+                profile_min_salary = profile.salary_min
+                profile_max_salary = profile.salary_max
+                
+                # Use profile values if no explicit parameters provided
+                if parsed_min_salary is None and profile_min_salary is not None:
+                    parsed_min_salary = profile_min_salary
+                    
+                if parsed_max_salary is None and profile_max_salary is not None:
+                    parsed_max_salary = profile_max_salary
         
         # Debug parameters
-        logger.info(f"Job matching parameters - similarity_threshold: {parsed_similarity_threshold}, max_jobs: {parsed_max_jobs}")
+        logger.info(
+            f"Job matching parameters - "
+            f"similarity_threshold: {parsed_similarity_threshold}, "
+            f"max_jobs: {parsed_max_jobs}, "
+            f"min_salary: {parsed_min_salary}, "
+            f"max_salary: {parsed_max_salary}, "
+            f"use_profile_salary: {use_profile_salary}"
+        )
         
         # Validate file
         file_service.validate_file(file)
@@ -133,7 +187,9 @@ async def match_jobs(
             content_type=file.content_type,
             user_id=user.id if user else None,
             similarity_threshold=parsed_similarity_threshold,
-            max_jobs=parsed_max_jobs
+            max_jobs=parsed_max_jobs,
+            min_salary=parsed_min_salary,
+            max_salary=parsed_max_salary
         )
         
         # Record job match in database if user is authenticated
@@ -175,5 +231,54 @@ async def get_supported_formats():
         "description": {
             "application/pdf": "PDF documents",
             "text/plain": "Plain text files"
+        }
+    }
+
+
+@router.get("/salary-ranges")
+async def get_salary_ranges():
+    """
+    Get common salary ranges for different job types
+    """
+    from app.services.job_scraper import JobScraperService
+    
+    job_scraper = JobScraperService()
+    
+    # Get sample salary ranges for different job types
+    salary_ranges = {
+        "entry_level": {
+            "range": "$50,000 - $80,000",
+            "median": "$65,000"
+        },
+        "mid_level": {
+            "range": "$80,000 - $120,000",
+            "median": "$95,000"
+        },
+        "senior_level": {
+            "range": "$120,000 - $180,000",
+            "median": "$145,000"
+        },
+        "management": {
+            "range": "$140,000 - $220,000",
+            "median": "$175,000"
+        },
+        "contract": {
+            "range": "$50 - $100 per hour",
+            "median": "$75 per hour"
+        }
+    }
+    
+    # Get job types with salary ranges
+    job_types = {}
+    for job_type in ["Full-time", "Part-time", "Contract", "Internship", "Remote"]:
+        job_types[job_type] = job_scraper._generate_salary_range(job_type)
+    
+    return {
+        "salary_ranges_by_level": salary_ranges,
+        "salary_ranges_by_job_type": job_types,
+        "recommended_filtering": {
+            "entry_level": {"min": 50000, "max": 80000},
+            "mid_level": {"min": 80000, "max": 120000},
+            "senior_level": {"min": 120000, "max": 180000}
         }
     }

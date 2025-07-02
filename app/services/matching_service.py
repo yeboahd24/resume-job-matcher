@@ -7,9 +7,12 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from typing import List, Dict, Any, Tuple
 import logging
+import re
 
 from app.models.job import JobDetail
 from app.core.config import settings
+from app.utils.salary_parser import parse_salary_range, filter_jobs_by_salary
+from app.utils.job_filters import filter_jobs_by_location, filter_jobs_by_type, apply_all_filters
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +25,11 @@ class JobMatchingService:
     def __init__(self):
         self.similarity_threshold = settings.SIMILARITY_THRESHOLD
         self.max_jobs = settings.MAX_MATCHED_JOBS
+        self.min_salary = None
+        self.max_salary = None
+        self.locations = None
+        self.job_types = None
+        self.remote_only = False
         self.max_features = 1000
         self.vectorizer = None
     
@@ -92,6 +100,13 @@ class JobMatchingService:
             return []
         
         try:
+            # Apply salary filtering if specified
+            if self.min_salary is not None or self.max_salary is not None:
+                jobs = filter_jobs_by_salary(jobs, self.min_salary, self.max_salary)
+                if not jobs:
+                    logger.info(f"No jobs match the salary criteria: min={self.min_salary}, max={self.max_salary}")
+                    return []
+            
             # Extract job descriptions
             job_descriptions = [job.get('description', '') for job in jobs]
             
