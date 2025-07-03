@@ -1,0 +1,56 @@
+# Development Docker Compose override
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  api:
+    environment:
+      - DEBUG=true
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+      - WORKERS=1
+    volumes:
+      - ../../:/app:ro  # Mount source code for development
+      - app_data:/app/data
+      - app_logs:/app/logs
+    ports:
+      - "8000:8000"
+      - "5678:5678"  # For debugpy if needed
+    command: python main.py
+
+  worker:
+    environment:
+      - DEBUG=true
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ../../:/app:ro  # Mount source code for development
+      - app_data:/app/data
+      - app_logs:/app/logs
+    command: celery -A app.core.celery_app.celery_app worker --loglevel=debug --concurrency=1 --reload
+
+  flower:
+    environment:
+      - DEBUG=true
+    volumes:
+      - ../../:/app:ro
+
+  # Add a database container for development
+  postgres:
+    image: postgres:15-alpine
+    container_name: resume-matcher-postgres-dev
+    environment:
+      - POSTGRES_DB=resume_matcher_dev
+      - POSTGRES_USER=dev_user
+      - POSTGRES_PASSWORD=dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev_user -d resume_matcher_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
