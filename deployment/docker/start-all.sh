@@ -3,11 +3,7 @@
 # Function to handle shutdown
 cleanup() {
     echo "Shutting down services..."
-    if [ -n "$FLOWER_PID" ]; then
-        kill $REDIS_PID $CELERY_PID $FLOWER_PID $API_PID 2>/dev/null
-    else
-        kill $REDIS_PID $CELERY_PID $API_PID 2>/dev/null
-    fi
+    kill $CELERY_PID $API_PID 2>/dev/null
     wait
     exit 0
 }
@@ -15,22 +11,28 @@ cleanup() {
 # Set up signal handlers
 trap cleanup SIGTERM SIGINT
 
-echo "Starting Redis server..."
-redis-server --daemonize no --bind 127.0.0.1 --port 6379 &
-REDIS_PID=$!
+echo "Testing external Redis connection..."
+# Test external Redis connection using Python
+python -c "
+import redis
+import sys
+try:
+    r = redis.Redis.from_url('$REDIS_URL')
+    result = r.ping()
+    if result:
+        print('✅ External Redis connection successful!')
+    else:
+        print('❌ Redis ping failed')
+        sys.exit(1)
+except Exception as e:
+    print(f'❌ Redis connection error: {e}')
+    sys.exit(1)
+"
 
-# Wait for Redis to be ready
-echo "Waiting for Redis to start..."
-sleep 5
-
-# Test Redis connection
-redis-cli ping
 if [ $? -ne 0 ]; then
-    echo "Redis failed to start"
+    echo "External Redis connection failed"
     exit 1
 fi
-
-echo "Redis is ready!"
 
 # Initialize database if needed
 echo "Initializing database..."
@@ -65,7 +67,7 @@ API_PID=$!
 
 echo "All services started!"
 echo "FastAPI: http://localhost:8000"
-echo "Redis: localhost:6379"
+echo "External Redis: red-d1kqjmndiees73esmufg:6379"
 
 # Wait for any process to exit
 wait -n
