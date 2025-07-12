@@ -83,7 +83,7 @@ class Settings(BaseSettings):
     # Job scraping settings
     JOB_SCRAPING_ENABLED: bool = True
     JOB_SCRAPING_TIMEOUT: int = 30
-    USE_MOCK_JOBS: bool = True  # Set to False for real scraping
+    USE_MOCK_JOBS: bool = False  # Set to False for real scraping
     
     # Rate limiting for web scraping
     SCRAPING_MIN_DELAY: float = 1.0  # Minimum delay between requests (seconds)
