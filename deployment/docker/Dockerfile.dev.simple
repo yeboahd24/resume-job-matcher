@@ -20,6 +20,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir pydantic-settings
 
+# Install Flower for Celery monitoring
+RUN pip install --no-cache-dir flower==2.0.1
+
 # Install development dependencies
 RUN pip install --no-cache-dir \
     debugpy \

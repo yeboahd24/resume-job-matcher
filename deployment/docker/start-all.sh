@@ -3,7 +3,11 @@
 # Function to handle shutdown
 cleanup() {
     echo "Shutting down services..."
-    kill $REDIS_PID $CELERY_PID $FLOWER_PID $API_PID 2>/dev/null
+    if [ -n "$FLOWER_PID" ]; then
+        kill $REDIS_PID $CELERY_PID $FLOWER_PID $API_PID 2>/dev/null
+    else
+        kill $REDIS_PID $CELERY_PID $API_PID 2>/dev/null
+    fi
     wait
     exit 0
 }
@@ -53,8 +57,14 @@ celery -A app.core.celery_app.celery_app worker --loglevel=info --concurrency=2 
 CELERY_PID=$!
 
 echo "Starting Flower monitoring..."
-celery -A app.core.celery_app.celery_app flower --port=5555 &
-FLOWER_PID=$!
+if command -v flower >/dev/null 2>&1; then
+    celery -A app.core.celery_app.celery_app flower --port=5555 &
+    FLOWER_PID=$!
+    echo "Flower started successfully"
+else
+    echo "Flower not available, skipping..."
+    FLOWER_PID=""
+fi
 
 echo "Starting FastAPI application..."
 python main.py &
