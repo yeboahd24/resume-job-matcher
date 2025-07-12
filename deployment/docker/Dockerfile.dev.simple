@@ -20,9 +20,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir pydantic-settings
 
-# Install Flower for Celery monitoring
-RUN pip install --no-cache-dir flower==2.0.1
-
 # Install development dependencies
 RUN pip install --no-cache-dir \
     debugpy \
@@ -43,7 +40,7 @@ COPY deployment/docker/start-all.sh /start-all.sh
 RUN chmod +x /start-all.sh
 
 # Expose ports
-EXPOSE 8000 5555 6379
+EXPOSE 8000 6379
 
 # Set environment variables for single container setup
 ENV REDIS_URL=redis://localhost:6379/0

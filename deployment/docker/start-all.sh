@@ -56,15 +56,8 @@ echo "Starting Celery worker..."
 celery -A app.core.celery_app.celery_app worker --loglevel=info --concurrency=2 &
 CELERY_PID=$!
 
-echo "Starting Flower monitoring..."
-if command -v flower >/dev/null 2>&1; then
-    celery -A app.core.celery_app.celery_app flower --port=5555 &
-    FLOWER_PID=$!
-    echo "Flower started successfully"
-else
-    echo "Flower not available, skipping..."
-    FLOWER_PID=""
-fi
+# Flower removed for simplicity
+FLOWER_PID=""
 
 echo "Starting FastAPI application..."
 python main.py &
@@ -72,7 +65,6 @@ API_PID=$!
 
 echo "All services started!"
 echo "FastAPI: http://localhost:8000"
-echo "Flower: http://localhost:5555"
 echo "Redis: localhost:6379"
 
 # Wait for any process to exit
