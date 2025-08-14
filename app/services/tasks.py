@@ -4,7 +4,7 @@ Celery tasks for background processing
 
 import time
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import logging
 
 from app.core.celery_app import celery_app
@@ -18,7 +18,17 @@ logger = logging.getLogger(__name__)
 
 
 @celery_app.task(bind=True, name="app.services.tasks.process_resume_and_match_jobs")
-def process_resume_and_match_jobs(self, file_content: bytes, filename: str, content_type: str) -> Dict[str, Any]:
+def process_resume_and_match_jobs(
+    self, 
+    file_content: bytes, 
+    filename: str, 
+    content_type: str, 
+    user_id: Optional[int] = None,
+    similarity_threshold: Optional[float] = None,
+    max_jobs: Optional[int] = None,
+    min_salary: Optional[int] = None,
+    max_salary: Optional[int] = None
+) -> Dict[str, Any]:
     """
     Main Celery task to process resume and match jobs
     
@@ -27,6 +37,11 @@ def process_resume_and_match_jobs(self, file_content: bytes, filename: str, cont
         file_content: Resume file content as bytes
         filename: Original filename
         content_type: MIME type of the file
+        user_id: Optional user ID for authenticated users
+        similarity_threshold: Optional custom similarity threshold (0.0 to 1.0)
+        max_jobs: Optional maximum number of jobs to return (1 to 50)
+        min_salary: Optional minimum salary requirement
+        max_salary: Optional maximum salary consideration
         
     Returns:
         Dictionary with matched jobs and processing metadata
@@ -38,7 +53,24 @@ def process_resume_and_match_jobs(self, file_content: bytes, filename: str, cont
         file_service = FileService()
         nlp_service = NLPService()
         job_scraper = JobScraperService()
+        
+        # Initialize matching service with custom parameters if provided
         matching_service = JobMatchingService()
+        if similarity_threshold is not None:
+            matching_service.similarity_threshold = similarity_threshold
+        if max_jobs is not None:
+            matching_service.max_jobs = max_jobs
+        if min_salary is not None:
+            matching_service.min_salary = min_salary
+        if max_salary is not None:
+            matching_service.max_salary = max_salary
+            
+        logger.info(
+            f"Using similarity threshold: {matching_service.similarity_threshold}, "
+            f"max jobs: {matching_service.max_jobs}, "
+            f"min salary: {matching_service.min_salary}, "
+            f"max salary: {matching_service.max_salary}"
+        )
         
         # Step 1: Extract text from resume
         self.update_state(
@@ -149,7 +181,8 @@ def process_resume_and_match_jobs(self, file_content: bytes, filename: str, cont
                 'filename': filename,
                 'content_type': content_type,
                 'size_bytes': len(file_content)
-            }
+            },
+            'user_id': user_id  # Include user ID if available
         }
         
         logger.info(f"Job matching completed in {processing_time:.2f} seconds. "

@@ -1,0 +1,52 @@
+# Simple single-container development Dockerfile with Redis, Celery, and FastAPI
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies (Redis removed - using external)
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    gcc \
+    g++ \
+    git \
+    vim \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir pydantic-settings
+
+# Install development dependencies
+RUN pip install --no-cache-dir \
+    debugpy \
+    ipython \
+    jupyter
+
+# Download spacy model
+RUN python -m spacy download en_core_web_sm
+
+# Copy application code
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p data/uploads data/samples logs
+
+# Create simple startup script
+COPY deployment/docker/start-all.sh /start-all.sh
+RUN chmod +x /start-all.sh
+
+# Expose ports
+EXPOSE 8000
+
+# Set environment variables for external Redis
+ENV REDIS_URL=redis://red-d1kqjmndiees73esmufg:6379
+ENV CELERY_BROKER_URL=redis://red-d1kqjmndiees73esmufg:6379
+ENV CELERY_RESULT_BACKEND=redis://red-d1kqjmndiees73esmufg:6379
+ENV DEBUG=true
+ENV ENVIRONMENT=development
+
+# Start all services
+CMD ["/start-all.sh"]

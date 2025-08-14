@@ -1,11 +1,12 @@
-# version: '3.8'
+# Docker Compose file for Resume Job Matcher
+# Removed version as it's obsolete in newer Docker Compose versions
 
 services:
   redis:
     image: redis:7-alpine
     container_name: resume-matcher-redis
     ports:
-      - "6379:6379"
+      - "6389:6379"
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes

@@ -1,0 +1,64 @@
+# Single-container development Dockerfile with Redis, Celery, and FastAPI
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies including Redis
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    gcc \
+    g++ \
+    git \
+    vim \
+    redis-server \
+    supervisor \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir pydantic-settings
+
+# Install development dependencies
+RUN pip install --no-cache-dir \
+    debugpy \
+    ipython \
+    jupyter
+
+# Download spacy model
+RUN python -m spacy download en_core_web_sm
+
+# Copy application code
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p data/uploads data/samples logs /var/log/supervisor
+
+# Create Redis configuration
+RUN echo "bind 127.0.0.1" > /etc/redis/redis.conf && \
+    echo "port 6379" >> /etc/redis/redis.conf && \
+    echo "daemonize no" >> /etc/redis/redis.conf && \
+    echo "save 900 1" >> /etc/redis/redis.conf && \
+    echo "save 300 10" >> /etc/redis/redis.conf && \
+    echo "save 60 10000" >> /etc/redis/redis.conf
+
+# Create supervisor configuration
+COPY deployment/docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Create startup script
+COPY deployment/docker/start-services.sh /start-services.sh
+RUN chmod +x /start-services.sh
+
+# Expose ports
+EXPOSE 8000 5678
+
+# Set environment variables for single container setup
+ENV REDIS_URL=redis://localhost:6379/0
+ENV CELERY_BROKER_URL=redis://localhost:6379/0
+ENV CELERY_RESULT_BACKEND=redis://localhost:6379/0
+ENV DEBUG=true
+ENV ENVIRONMENT=development
+
+# Use supervisor to manage all services
+CMD ["/start-services.sh"]
